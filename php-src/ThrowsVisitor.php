@@ -9,6 +9,7 @@ use phpDocumentor\Reflection\DocBlockFactory;
 use PhpParser\Comment\Doc;
 use PhpParser\Node;
 use PhpParser\Node\Expr;
+use PhpParser\Node\Expr\FuncCall;
 use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\New_;
 use PhpParser\Node\Expr\PropertyFetch;
@@ -247,6 +248,10 @@ final class ThrowsVisitor extends NodeVisitorAbstract
             $this->analyzeThrow($node);
         }
 
+        if ($node instanceof FuncCall) {
+            $this->analyzeFunctionCall($node);
+        }
+
         if ($node instanceof MethodCall) {
             $this->analyzeMethodCall($node);
         }
@@ -388,6 +393,58 @@ final class ThrowsVisitor extends NodeVisitorAbstract
             'function' => $this->currentFunction,
             'message' => "Exception '{$exceptionType}' is thrown but not declared in @throws tag",
         ];
+    }
+
+    /**
+     * Analyze a function call for built-in functions that can throw exceptions
+     *
+     * @param FuncCall $node Function call node
+     *
+     * @return void
+     */
+    private function analyzeFunctionCall(FuncCall $node): void
+    {
+        if (!$node->name instanceof Name) {
+            return;
+        }
+
+        $functionName = $node->name->toString();
+
+        $builtinThrows = BuiltinFunctionThrows::getThrows($functionName);
+
+        if ($builtinThrows === null) {
+            return;
+        }
+
+        foreach ($builtinThrows as $exceptionType) {
+            if ($this->isExceptionCaught($exceptionType)) {
+                continue;
+            }
+
+            $this->actuallyThrown[] = $exceptionType;
+
+            $isDocumented = false;
+
+            foreach ($this->declaredThrows as $declared) {
+                if ($this->isExceptionMatching($exceptionType, $declared)) {
+                    $isDocumented = true;
+
+                    break;
+                }
+            }
+
+            if ($isDocumented) {
+                continue;
+            }
+
+            $this->errors[] = [
+                'line' => $node->getStartLine(),
+                'type' => 'undeclared_throw',
+                'exception' => $exceptionType,
+                'function' => $this->currentFunction,
+                'message' => "Function '{$functionName}()' can throw '{$exceptionType}' but it's not declared in @throws tag",
+            ];
+        }
     }
 
     /**
