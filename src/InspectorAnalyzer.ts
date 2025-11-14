@@ -179,6 +179,9 @@ export class InspectorAnalyzer {
         diagnostic.source = 'PHP Exception Inspector';
         diagnostic.code = error.type;
 
+        // Store exception name for quick fix
+        (diagnostic as any).exceptionName = error.exception;
+
         diagnostics.push(diagnostic);
       }
     }

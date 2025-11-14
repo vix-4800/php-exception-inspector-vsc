@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { InspectorAnalyzer } from './InspectorAnalyzer';
+import { ThrowsCodeActionProvider } from './ThrowsCodeActionProvider';
 
 let diagnosticCollection: vscode.DiagnosticCollection;
 let analyzer: InspectorAnalyzer;
@@ -13,6 +14,16 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Initialize analyzer
   analyzer = new InspectorAnalyzer(diagnosticCollection, context.extensionPath);
+
+  // Register code action provider for quick fixes
+  const codeActionProvider = vscode.languages.registerCodeActionsProvider(
+    'php',
+    new ThrowsCodeActionProvider(),
+    {
+      providedCodeActionKinds: ThrowsCodeActionProvider.providedCodeActionKinds,
+    }
+  );
+  context.subscriptions.push(codeActionProvider);
 
   // Register command to manually analyze current file
   const analyzeCommand = vscode.commands.registerCommand(

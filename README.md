@@ -9,6 +9,7 @@ A Visual Studio Code extension that analyzes PHP code for undocumented exception
 
 - **Automatic Analysis**: Analyzes PHP files on open and save
 - **Real-time Diagnostics**: Shows problems directly in the VS Code Problems panel
+- **Quick Fix Support**: Automatically add missing `@throws` tags with one click
 - **Manual Analysis**: Run analysis on-demand via command palette
 - **Configurable**: Customize analysis behavior through VS Code settings
 
