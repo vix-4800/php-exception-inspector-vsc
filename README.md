@@ -1,0 +1,50 @@
+# PHP Exception Inspector
+
+![Version](https://img.shields.io/badge/version-0.1.1-blue.svg)
+![License](https://img.shields.io/badge/license-MIT-green.svg)
+
+A Visual Studio Code extension that analyzes PHP code for undocumented exception handling and missing `@throws` tags in docblocks.
+
+## Features
+
+- **Automatic Analysis**: Analyzes PHP files on open and save
+- **Real-time Diagnostics**: Shows problems directly in the VS Code Problems panel
+- **Manual Analysis**: Run analysis on-demand via command palette
+- **Configurable**: Customize analysis behavior through VS Code settings
+
+## Extension Settings
+
+This extension contributes the following settings:
+
+- `phpExceptionInspector.executablePath`: Path to executable. If empty, will search in workspace and PATH
+- `phpExceptionInspector.analyzeOnSave`: Automatically analyze PHP files on save (default: `true`)
+- `phpExceptionInspector.analyzeOnOpen`: Automatically analyze PHP files when opened (default: `true`)
+- `phpExceptionInspector.noProjectScan`: Disable automatic project-wide scanning for faster single file analysis
+  (default: `false`)
+
+## Usage
+
+### Automatic Analysis
+
+By default, the extension automatically analyzes PHP files when you open or save them. Any detected issues will
+appear in the Problems panel.
+
+### Manual Analysis
+
+You can manually trigger analysis using the Command Palette:
+
+1. Open Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P`)
+2. Type "PHP Exception Inspector: Analyze Current File"
+3. Press Enter
+
+## What Does It Check?
+
+PHP Exception Inspector detects:
+
+- Missing `@throws` tags in docblocks for thrown exceptions
+- Undocumented exceptions that propagate from called functions
+- Exception handling issues in your PHP code
+
+## License
+
+This extension is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
