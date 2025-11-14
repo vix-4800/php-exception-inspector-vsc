@@ -7,6 +7,7 @@ export class ThrowsCodeActionProvider implements vscode.CodeActionProvider {
     document: vscode.TextDocument,
     range: vscode.Range | vscode.Selection,
     context: vscode.CodeActionContext,
+    // eslint-disable-next-line no-unused-vars
     _token: vscode.CancellationToken
   ): vscode.CodeAction[] | undefined {
     // Filter diagnostics from our extension
