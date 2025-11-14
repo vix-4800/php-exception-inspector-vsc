@@ -6,6 +6,7 @@ namespace Vix\ExceptionInspector\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
 use Vix\ExceptionInspector\Analyzer;
+use Vix\ExceptionInspector\CacheManager;
 
 /**
  * Test performance improvements with caching
@@ -49,7 +50,7 @@ final class CachePerformanceTest extends TestCase
             }
         }
 
-        $cacheFile = "{$this->tempDir}/.php-exception-inspector-cache.json";
+        $cacheFile = "{$this->tempDir}/" . CacheManager::CACHE_FILE_NAME;
 
         if (file_exists($cacheFile)) {
             unlink($cacheFile);

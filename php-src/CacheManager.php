@@ -12,6 +12,13 @@ use JsonException;
 final class CacheManager
 {
     /**
+     * Cache file name
+     *
+     * @var string
+     */
+    public const string CACHE_FILE_NAME = '.php-exception-inspector-cache.json';
+
+    /**
      * Cache file path
      *
      * @var string
@@ -46,7 +53,7 @@ final class CacheManager
      */
     public function __construct(string $projectRoot)
     {
-        $this->cacheFilePath = $projectRoot . '/.php-exception-inspector-cache.json';
+        $this->cacheFilePath = "{$projectRoot}/" . self::CACHE_FILE_NAME;
     }
 
     /**

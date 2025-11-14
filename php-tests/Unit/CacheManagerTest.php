@@ -26,15 +26,17 @@ final class CacheManagerTest extends TestCase
     {
         parent::tearDown();
 
-        $cacheFile = $this->tempDir . '/.php-exception-inspector-cache.json';
+        $cacheFile = "{$this->tempDir}/" . CacheManager::CACHE_FILE_NAME;
 
         if (file_exists($cacheFile)) {
             unlink($cacheFile);
         }
 
-        if (is_dir($this->tempDir)) {
-            rmdir($this->tempDir);
+        if (!is_dir($this->tempDir)) {
+            return;
         }
+
+        rmdir($this->tempDir);
     }
 
     public function testCacheManagerInitialization(): void
