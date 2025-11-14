@@ -26,7 +26,8 @@ final class CacheManagerTest extends TestCase
     {
         parent::tearDown();
 
-        $cacheFile = "{$this->tempDir}/" . CacheManager::CACHE_FILE_NAME;
+        $cache = new CacheManager($this->tempDir);
+        $cacheFile = $cache->getCacheFilePath();
 
         if (file_exists($cacheFile)) {
             unlink($cacheFile);

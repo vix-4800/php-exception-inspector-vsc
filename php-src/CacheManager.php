@@ -12,7 +12,7 @@ use JsonException;
 final class CacheManager
 {
     /**
-     * Cache file name
+     * Cache file name prefix
      *
      * @var string
      */
@@ -49,11 +49,38 @@ final class CacheManager
     /**
      * Constructor
      *
-     * @param string $projectRoot Project root directory where cache will be stored
+     * @param string $projectRoot Project root directory
      */
     public function __construct(string $projectRoot)
     {
-        $this->cacheFilePath = "{$projectRoot}/" . self::CACHE_FILE_NAME;
+        $this->cacheFilePath = $this->buildCacheFilePath($projectRoot);
+    }
+
+    /**
+     * Build cache file path in system temp directory
+     *
+     * @param string $projectRoot Project root directory
+     *
+     * @return string Cache file path
+     */
+    private function buildCacheFilePath(string $projectRoot): string
+    {
+        $tempDir = sys_get_temp_dir();
+
+        $projectHash = md5($projectRoot);
+        $cacheFileName = "php-exception-inspector-{$projectHash}.json";
+
+        return "{$tempDir}/{$cacheFileName}";
+    }
+
+    /**
+     * Get the cache file path for this instance
+     *
+     * @return string Cache file path
+     */
+    public function getCacheFilePath(): string
+    {
+        return $this->cacheFilePath;
     }
 
     /**

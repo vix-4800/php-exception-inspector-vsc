@@ -50,7 +50,8 @@ final class CachePerformanceTest extends TestCase
             }
         }
 
-        $cacheFile = "{$this->tempDir}/" . CacheManager::CACHE_FILE_NAME;
+        $cache = new CacheManager($this->tempDir);
+        $cacheFile = $cache->getCacheFilePath();
 
         if (file_exists($cacheFile)) {
             unlink($cacheFile);
