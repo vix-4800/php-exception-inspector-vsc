@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
-import { VigilAnalyzer } from './vigilAnalyzer';
+import { InspectorAnalyzer } from './InspectorAnalyzer';
 
 let diagnosticCollection: vscode.DiagnosticCollection;
-let analyzer: VigilAnalyzer;
+let analyzer: InspectorAnalyzer;
 
 export function activate(context: vscode.ExtensionContext) {
   console.log('PHP Exception Inspector is now active');
@@ -12,7 +12,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(diagnosticCollection);
 
   // Initialize analyzer
-  analyzer = new VigilAnalyzer(diagnosticCollection);
+  analyzer = new InspectorAnalyzer(diagnosticCollection);
 
   // Register command to manually analyze current file
   const analyzeCommand = vscode.commands.registerCommand(

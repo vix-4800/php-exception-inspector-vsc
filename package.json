@@ -5,7 +5,7 @@
     "publisher": "vix",
     "repository": {
         "type": "git",
-        "url": "https://github.com/vix-4800/vigil-vsc"
+        "url": "https://github.com/vix-4800/php-exception-inspector-vsc.git"
     },
     "version": "0.1.1",
     "engines": {
@@ -42,7 +42,7 @@
                 "phpExceptionInspector.executablePath": {
                     "type": "string",
                     "default": "",
-                    "description": "Path to vigil executable. If empty, will search in workspace and PATH"
+                    "description": "Path to php-exception-inspector executable. If empty, will search in workspace and PATH"
                 },
                 "phpExceptionInspector.analyzeOnSave": {
                     "type": "boolean",

@@ -1,25 +1,25 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { VigilAnalyzer } from '../../vigilAnalyzer';
+import { InspectorAnalyzer } from '../../InspectorAnalyzer';
 
-suite('VigilAnalyzer Test Suite', () => {
+suite('InspectorAnalyzer Test Suite', () => {
   let diagnosticCollection: vscode.DiagnosticCollection;
-  let analyzer: VigilAnalyzer;
+  let analyzer: InspectorAnalyzer;
 
   setup(() => {
     diagnosticCollection = vscode.languages.createDiagnosticCollection(
       'php-exception-inspector-test'
     );
-    analyzer = new VigilAnalyzer(diagnosticCollection);
+    analyzer = new InspectorAnalyzer(diagnosticCollection);
   });
 
   teardown(() => {
     diagnosticCollection.dispose();
   });
 
-  test('VigilAnalyzer should be instantiated', () => {
+  test('InspectorAnalyzer should be instantiated', () => {
     assert.ok(analyzer);
-    assert.ok(analyzer instanceof VigilAnalyzer);
+    assert.ok(analyzer instanceof InspectorAnalyzer);
   });
 
   test('Should handle untitled documents gracefully', async () => {

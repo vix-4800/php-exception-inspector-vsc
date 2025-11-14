@@ -3,20 +3,20 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 
-interface VigilError {
+interface InspectorError {
   line: number;
   type: string;
   exception: string;
   message: string;
 }
 
-interface VigilFileResult {
+interface InspectorFileResult {
   file: string;
-  errors: VigilError[];
+  errors: InspectorError[];
 }
 
-interface VigilResult {
-  files?: VigilFileResult[];
+interface InspectorResult {
+  files?: InspectorFileResult[];
   summary?: {
     total_files: number;
     files_with_errors: number;
@@ -29,7 +29,7 @@ interface VigilResult {
   };
 }
 
-export class VigilAnalyzer {
+export class InspectorAnalyzer {
   private diagnosticCollection: vscode.DiagnosticCollection;
   private outputChannel: vscode.OutputChannel;
   private statusBarItem: vscode.StatusBarItem;
@@ -41,9 +41,9 @@ export class VigilAnalyzer {
   }
 
   /**
-   * Find vigil executable path
+   * Find Inspector executable path
    */
-  private findVigilExecutable(): string | null {
+  private findInspectorExecutable(): string | null {
     const config = vscode.workspace.getConfiguration('phpExceptionInspector');
     const configuredPath = config.get<string>('executablePath');
 
@@ -52,37 +52,42 @@ export class VigilAnalyzer {
       return configuredPath;
     }
 
-    // Look for vigil in workspace
+    // Look for Inspector in workspace
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (workspaceFolders) {
       for (const folder of workspaceFolders) {
-        // Check for bin/vigil in workspace root
-        const vigilPath = path.join(folder.uri.fsPath, 'bin', 'vigil');
-        if (fs.existsSync(vigilPath)) {
-          return vigilPath;
+        // Check for bin/php-exception-inspector in workspace root
+        const inspectorPath = path.join(folder.uri.fsPath, 'bin', 'php-exception-inspector');
+        if (fs.existsSync(inspectorPath)) {
+          return inspectorPath;
         }
 
-        // Check for ../bin/vigil (if extension is in subdirectory)
-        const parentVigilPath = path.join(folder.uri.fsPath, '..', 'bin', 'vigil');
-        if (fs.existsSync(parentVigilPath)) {
-          return parentVigilPath;
+        // Check for ../bin/php-exception-inspector (if extension is in subdirectory)
+        const parentInspectorPath = path.join(
+          folder.uri.fsPath,
+          '..',
+          'bin',
+          'php-exception-inspector'
+        );
+        if (fs.existsSync(parentInspectorPath)) {
+          return parentInspectorPath;
         }
       }
     }
 
     // Try to find in PATH
     try {
-      child_process.execSync('which vigil', { encoding: 'utf-8' });
-      return 'vigil';
+      child_process.execSync('which php-exception-inspector', { encoding: 'utf-8' });
+      return 'php-exception-inspector';
     } catch {
-      // vigil not found in PATH
+      // php-exception-inspector not found in PATH
     }
 
     return null;
   }
 
   /**
-   * Analyze a document using Vigil
+   * Analyze a document using Inspector
    */
   public async analyzeDocument(document: vscode.TextDocument): Promise<void> {
     // Clear previous diagnostics for this document
@@ -93,29 +98,29 @@ export class VigilAnalyzer {
       return;
     }
 
-    const vigilPath = this.findVigilExecutable();
-    if (!vigilPath) {
+    const inspectorPath = this.findInspectorExecutable();
+    if (!inspectorPath) {
       const message =
-        'Vigil executable not found. Please install Vigil or configure the path in settings.';
+        'PHP Exception Inspector executable not found. Please install PHP Exception Inspector or configure the path in settings.';
       this.outputChannel.appendLine(`Error: ${message}`);
       vscode.window.showErrorMessage(message);
       return;
     }
 
     this.outputChannel.appendLine(`Analyzing: ${document.fileName}`);
-    this.outputChannel.appendLine(`Using Vigil: ${vigilPath}`);
+    this.outputChannel.appendLine(`Using PHP Exception Inspector: ${inspectorPath}`);
 
     // Show status bar notification
-    this.statusBarItem.text = '$(sync~spin) Vigil: Analyzing...';
+    this.statusBarItem.text = '$(sync~spin) PHP Exception Inspector: Analyzing...';
     this.statusBarItem.show();
 
     try {
-      const result = await this.runVigil(vigilPath, document.fileName);
+      const result = await this.runInspector(inspectorPath, document.fileName);
       this.processResult(document, result);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      this.outputChannel.appendLine(`Error running Vigil: ${errorMessage}`);
-      vscode.window.showErrorMessage(`Vigil analysis failed: ${errorMessage}`);
+      this.outputChannel.appendLine(`Error running PHP Exception Inspector: ${errorMessage}`);
+      vscode.window.showErrorMessage(`PHP Exception Inspector analysis failed: ${errorMessage}`);
     } finally {
       // Hide status bar notification when done
       this.statusBarItem.hide();
@@ -123,9 +128,9 @@ export class VigilAnalyzer {
   }
 
   /**
-   * Run vigil command and parse output
+   * Run inspector command and parse output
    */
-  private runVigil(vigilPath: string, filePath: string): Promise<VigilResult> {
+  private runInspector(inspectorPath: string, filePath: string): Promise<InspectorResult> {
     return new Promise((resolve, reject) => {
       const config = vscode.workspace.getConfiguration('phpExceptionInspector');
       const noProjectScan = config.get<boolean>('noProjectScan', false);
@@ -135,7 +140,7 @@ export class VigilAnalyzer {
         args.unshift('--no-project-scan');
       }
 
-      const process = child_process.spawn(vigilPath, args);
+      const process = child_process.spawn(inspectorPath, args);
       let stdout = '';
       let stderr = '';
 
@@ -148,39 +153,39 @@ export class VigilAnalyzer {
       });
 
       process.on('close', (code) => {
-        this.outputChannel.appendLine(`Vigil exit code: ${code}`);
+        this.outputChannel.appendLine(`PHP Exception Inspector exit code: ${code}`);
 
         if (stderr) {
           this.outputChannel.appendLine(`Stderr: ${stderr}`);
         }
 
         if (!stdout) {
-          reject(new Error('No output from Vigil'));
+          reject(new Error('No output from PHP Exception Inspector'));
           return;
         }
 
         try {
-          const result = JSON.parse(stdout) as VigilResult;
+          const result = JSON.parse(stdout) as InspectorResult;
           resolve(result);
         } catch (error) {
           this.outputChannel.appendLine(`Failed to parse JSON: ${stdout}`);
-          reject(new Error(`Failed to parse Vigil output: ${error}`));
+          reject(new Error(`Failed to parse PHP Exception Inspector output: ${error}`));
         }
       });
 
       process.on('error', (error) => {
-        reject(new Error(`Failed to run Vigil: ${error.message}`));
+        reject(new Error(`Failed to run PHP Exception Inspector: ${error.message}`));
       });
     });
   }
 
   /**
-   * Process Vigil result and create diagnostics
+   * Process PHP Exception Inspector result and create diagnostics
    */
-  private processResult(document: vscode.TextDocument, result: VigilResult): void {
+  private processResult(document: vscode.TextDocument, result: InspectorResult): void {
     if (result.error) {
-      this.outputChannel.appendLine(`Vigil error: ${result.error.message}`);
-      vscode.window.showErrorMessage(`Vigil error: ${result.error.message}`);
+      this.outputChannel.appendLine(`PHP Exception Inspector error: ${result.error.message}`);
+      vscode.window.showErrorMessage(`PHP Exception Inspector error: ${result.error.message}`);
       return;
     }
 
@@ -202,7 +207,7 @@ export class VigilAnalyzer {
           vscode.DiagnosticSeverity.Warning
         );
 
-        diagnostic.source = 'Vigil';
+        diagnostic.source = 'PHP Exception Inspector';
         diagnostic.code = error.type;
 
         diagnostics.push(diagnostic);
