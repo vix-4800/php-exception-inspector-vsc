@@ -37,7 +37,7 @@ final class ExceptionHierarchyAnalyzerTest extends TestCase
 
         $hasExceptionError = false;
         foreach ($errors as $error) {
-            if ($error['type'] === 'missing_throws' &&
+            if ($error['type'] === 'undeclared_throw' &&
                 str_contains($error['exception'] ?? '', 'Exception')) {
                 $hasExceptionError = true;
                 break;
@@ -65,7 +65,7 @@ final class ExceptionHierarchyAnalyzerTest extends TestCase
 
         $hasLogicExceptionError = false;
         foreach ($errors as $error) {
-            if ($error['type'] === 'missing_throws' &&
+            if ($error['type'] === 'undeclared_throw' &&
                 str_contains($error['exception'] ?? '', 'LogicException')) {
                 $hasLogicExceptionError = true;
                 break;
