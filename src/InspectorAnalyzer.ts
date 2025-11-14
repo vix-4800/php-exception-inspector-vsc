@@ -34,12 +34,31 @@ export class InspectorAnalyzer {
   private outputChannel: vscode.OutputChannel;
   private statusBarItem: vscode.StatusBarItem;
   private extensionPath: string;
+  private logLineCount: number = 0;
 
   constructor(diagnosticCollection: vscode.DiagnosticCollection, extensionPath: string) {
     this.diagnosticCollection = diagnosticCollection;
     this.extensionPath = extensionPath;
     this.outputChannel = vscode.window.createOutputChannel('PHP Exception Inspector');
     this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
+  }
+
+  /**
+   * Append line to output channel with automatic cleanup when exceeding max lines
+   */
+  private appendLog(message: string): void {
+    this.logLineCount++;
+
+    const config = vscode.workspace.getConfiguration('phpExceptionInspector');
+    const maxLogLines = config.get<number>('maxLogLines', 1000);
+
+    if (this.logLineCount > maxLogLines) {
+      this.outputChannel.clear();
+      this.logLineCount = 0;
+      this.outputChannel.appendLine(`--- Log cleared due to size limit (${maxLogLines} lines) ---`);
+    }
+
+    this.outputChannel.appendLine(message);
   }
 
   /**
@@ -71,13 +90,13 @@ export class InspectorAnalyzer {
     if (!inspectorPath) {
       const message =
         'PHP Exception Inspector executable not found in php-bin/. Please ensure the extension is properly installed.';
-      this.outputChannel.appendLine(`Error: ${message}`);
+      this.appendLog(`Error: ${message}`);
       vscode.window.showErrorMessage(message);
       return;
     }
 
-    this.outputChannel.appendLine(`Analyzing: ${document.fileName}`);
-    this.outputChannel.appendLine(`Using PHP Exception Inspector: ${inspectorPath}`);
+    this.appendLog(`Analyzing: ${document.fileName}`);
+    this.appendLog(`Using PHP Exception Inspector: ${inspectorPath}`);
 
     // Show status bar notification
     this.statusBarItem.text = '$(sync~spin) PHP Exception Inspector: Analyzing...';
@@ -88,7 +107,7 @@ export class InspectorAnalyzer {
       this.processResult(document, result);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      this.outputChannel.appendLine(`Error running PHP Exception Inspector: ${errorMessage}`);
+      this.appendLog(`Error running PHP Exception Inspector: ${errorMessage}`);
       vscode.window.showErrorMessage(`PHP Exception Inspector analysis failed: ${errorMessage}`);
     } finally {
       // Hide status bar notification when done
@@ -122,10 +141,10 @@ export class InspectorAnalyzer {
       });
 
       process.on('close', (code) => {
-        this.outputChannel.appendLine(`PHP Exception Inspector exit code: ${code}`);
+        this.appendLog(`PHP Exception Inspector exit code: ${code}`);
 
         if (stderr) {
-          this.outputChannel.appendLine(`Stderr: ${stderr}`);
+          this.appendLog(`Stderr: ${stderr}`);
         }
 
         if (!stdout) {
@@ -137,7 +156,7 @@ export class InspectorAnalyzer {
           const result = JSON.parse(stdout) as InspectorResult;
           resolve(result);
         } catch (error) {
-          this.outputChannel.appendLine(`Failed to parse JSON: ${stdout}`);
+          this.appendLog(`Failed to parse JSON: ${stdout}`);
           reject(new Error(`Failed to parse PHP Exception Inspector output: ${error}`));
         }
       });
@@ -153,13 +172,13 @@ export class InspectorAnalyzer {
    */
   private processResult(document: vscode.TextDocument, result: InspectorResult): void {
     if (result.error) {
-      this.outputChannel.appendLine(`PHP Exception Inspector error: ${result.error.message}`);
+      this.appendLog(`PHP Exception Inspector error: ${result.error.message}`);
       vscode.window.showErrorMessage(`PHP Exception Inspector error: ${result.error.message}`);
       return;
     }
 
     if (!result.files || result.files.length === 0) {
-      this.outputChannel.appendLine('No errors found');
+      this.appendLog('No errors found');
       return;
     }
 
@@ -189,13 +208,14 @@ export class InspectorAnalyzer {
     this.diagnosticCollection.set(document.uri, diagnostics);
 
     const errorCount = diagnostics.length;
-    this.outputChannel.appendLine(`Found ${errorCount} issue(s)`);
+    this.appendLog(`Found ${errorCount} issue(s)`);
   }
 
   /**
    * Dispose of resources
    */
   public dispose(): void {
+    this.outputChannel.dispose();
     this.statusBarItem.dispose();
   }
 }

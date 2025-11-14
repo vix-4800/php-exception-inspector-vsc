@@ -44,4 +44,14 @@ suite('InspectorAnalyzer Test Suite', () => {
   test('Should export analyzeDocument method', () => {
     assert.ok(typeof analyzer.analyzeDocument === 'function');
   });
+
+  test('Should have dispose method', () => {
+    assert.ok(typeof analyzer.dispose === 'function');
+  });
+
+  test('Should dispose without errors', () => {
+    assert.doesNotThrow(() => {
+      analyzer.dispose();
+    });
+  });
 });

@@ -53,6 +53,13 @@
                     "type": "boolean",
                     "default": false,
                     "description": "Disable automatic project-wide scanning (faster but less accurate for single files)"
+                },
+                "phpExceptionInspector.maxLogLines": {
+                    "type": "number",
+                    "default": 1000,
+                    "minimum": 100,
+                    "maximum": 10000,
+                    "description": "Maximum number of log lines in the output channel before automatic cleanup (prevents memory leaks)"
                 }
             }
         }

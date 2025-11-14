@@ -14,6 +14,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Initialize analyzer
   analyzer = new InspectorAnalyzer(diagnosticCollection, context.extensionPath);
+  context.subscriptions.push(analyzer);
 
   // Register code action provider for quick fixes
   const codeActionProvider = vscode.languages.registerCodeActionsProvider(
