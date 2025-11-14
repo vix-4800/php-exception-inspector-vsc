@@ -88,10 +88,8 @@ export class InspectorAnalyzer {
    * Analyze a document using Inspector
    */
   public async analyzeDocument(document: vscode.TextDocument): Promise<void> {
-    // Clear previous diagnostics for this document
     this.diagnosticCollection.delete(document.uri);
 
-    // Don't analyze unsaved files
     if (document.isUntitled) {
       return;
     }
@@ -108,7 +106,6 @@ export class InspectorAnalyzer {
     this.appendLog(`Analyzing: ${document.fileName}`);
     this.appendLog(`Using PHP Exception Inspector: ${inspectorPath}`);
 
-    // Show status bar notification
     this.statusBarItem.text = '$(sync~spin) PHP Exception Inspector: Analyzing...';
     this.statusBarItem.show();
 
@@ -120,7 +117,6 @@ export class InspectorAnalyzer {
       this.appendLog(`Error running PHP Exception Inspector: ${errorMessage}`);
       vscode.window.showErrorMessage(`PHP Exception Inspector analysis failed: ${errorMessage}`);
     } finally {
-      // Hide status bar notification when done
       this.statusBarItem.hide();
     }
   }
@@ -218,7 +214,7 @@ export class InspectorAnalyzer {
 
     for (const fileResult of result.files) {
       for (const error of fileResult.errors) {
-        const line = Math.max(0, error.line - 1); // Convert to 0-based
+        const line = Math.max(0, error.line - 1);
         const range = document.lineAt(line).range;
 
         const diagnostic = new vscode.Diagnostic(
@@ -229,8 +225,6 @@ export class InspectorAnalyzer {
 
         diagnostic.source = 'PHP Exception Inspector';
         diagnostic.code = error.type;
-
-        // Store exception name for quick fix
         (diagnostic as any).exceptionName = error.exception;
 
         diagnostics.push(diagnostic);

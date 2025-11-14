@@ -10,7 +10,6 @@ export class ThrowsCodeActionProvider implements vscode.CodeActionProvider {
     // eslint-disable-next-line no-unused-vars
     _token: vscode.CancellationToken
   ): vscode.CodeAction[] | undefined {
-    // Filter diagnostics from our extension
     const diagnostics = context.diagnostics.filter(
       (diagnostic) =>
         diagnostic.source === 'PHP Exception Inspector' &&
@@ -27,7 +26,6 @@ export class ThrowsCodeActionProvider implements vscode.CodeActionProvider {
     const codeActions: vscode.CodeAction[] = [];
 
     for (const diagnostic of diagnostics) {
-      // Extract exception name from diagnostic data
       const exceptionName = (diagnostic as any).exceptionName;
       if (!exceptionName) {
         continue;
@@ -41,7 +39,6 @@ export class ThrowsCodeActionProvider implements vscode.CodeActionProvider {
       action.diagnostics = [diagnostic];
       action.isPreferred = true;
 
-      // Create the edit
       const edit = this.createThrowsEdit(document, diagnostic, exceptionName);
       if (edit) {
         action.edit = edit;
@@ -60,7 +57,6 @@ export class ThrowsCodeActionProvider implements vscode.CodeActionProvider {
     diagnostic: vscode.Diagnostic,
     exceptionName: string
   ): vscode.WorkspaceEdit | undefined {
-    // Find the function/method declaration
     const methodInfo = this.findMethodDeclaration(document, diagnostic.range.start.line);
     if (!methodInfo) {
       return undefined;
@@ -70,7 +66,6 @@ export class ThrowsCodeActionProvider implements vscode.CodeActionProvider {
     const docblockInfo = this.findOrCreateDocblockLocation(document, methodInfo);
 
     if (docblockInfo.existing) {
-      // Add to existing docblock
       const insertPosition = this.findThrowsInsertPosition(
         document,
         docblockInfo.startLine,
@@ -80,7 +75,6 @@ export class ThrowsCodeActionProvider implements vscode.CodeActionProvider {
       const throwsLine = `${indent} * @throws ${exceptionName}\n`;
       edit.insert(document.uri, insertPosition, throwsLine);
     } else {
-      // Create new docblock
       const indent = this.getIndentation(document, methodInfo.declarationLine);
       const docblock = this.createDocblock(exceptionName, indent);
       edit.insert(document.uri, docblockInfo.position, docblock);
@@ -96,7 +90,6 @@ export class ThrowsCodeActionProvider implements vscode.CodeActionProvider {
     document: vscode.TextDocument,
     startLine: number
   ): { declarationLine: number; methodName: string } | undefined {
-    // Search upwards for function/method declaration
     for (let line = startLine; line >= Math.max(0, startLine - 50); line--) {
       const text = document.lineAt(line).text;
       const match = text.match(/^\s*(public|protected|private|static|\s)*function\s+(\w+)/);
@@ -122,10 +115,8 @@ export class ThrowsCodeActionProvider implements vscode.CodeActionProvider {
     endLine: number;
     position: vscode.Position;
   } {
-    // Check if there's a docblock above the method
     let checkLine = methodInfo.declarationLine - 1;
 
-    // Skip empty lines
     while (checkLine >= 0 && document.lineAt(checkLine).text.trim() === '') {
       checkLine--;
     }
@@ -133,7 +124,6 @@ export class ThrowsCodeActionProvider implements vscode.CodeActionProvider {
     if (checkLine >= 0) {
       const text = document.lineAt(checkLine).text.trim();
       if (text === '*/') {
-        // Found end of docblock, find the start
         let startLine = checkLine;
         while (startLine > 0) {
           const lineText = document.lineAt(startLine).text.trim();
@@ -150,7 +140,6 @@ export class ThrowsCodeActionProvider implements vscode.CodeActionProvider {
       }
     }
 
-    // No existing docblock, create position before method
     return {
       existing: false,
       startLine: -1,
@@ -171,7 +160,6 @@ export class ThrowsCodeActionProvider implements vscode.CodeActionProvider {
     let lastReturnLine = -1;
     let firstThrowsLine = -1;
 
-    // Scan docblock for existing tags
     for (let line = startLine + 1; line < endLine; line++) {
       const text = document.lineAt(line).text;
       if (text.includes('@param')) {
@@ -185,33 +173,27 @@ export class ThrowsCodeActionProvider implements vscode.CodeActionProvider {
       }
     }
 
-    // Insert after existing @throws tags
     if (firstThrowsLine !== -1) {
-      // Find last @throws tag
       let lastThrowsLine = firstThrowsLine;
       for (let line = firstThrowsLine + 1; line < endLine; line++) {
         const text = document.lineAt(line).text;
         if (text.includes('@throws')) {
           lastThrowsLine = line;
         } else if (text.trim().startsWith('*') && text.includes('@')) {
-          // Hit another tag, stop
           break;
         }
       }
       return new vscode.Position(lastThrowsLine + 1, 0);
     }
 
-    // Insert after @return
     if (lastReturnLine !== -1) {
       return new vscode.Position(lastReturnLine + 1, 0);
     }
 
-    // Insert after @param
     if (lastParamLine !== -1) {
       return new vscode.Position(lastParamLine + 1, 0);
     }
 
-    // Insert after description (before closing */)
     return new vscode.Position(endLine, 0);
   }
 

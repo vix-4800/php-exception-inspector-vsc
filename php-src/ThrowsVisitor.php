@@ -27,9 +27,6 @@ use PhpParser\Node\Stmt\TryCatch;
 use PhpParser\Node\Stmt\Use_;
 use PhpParser\NodeVisitorAbstract;
 
-// Suppress "Type is not used" warning - Catch_ is used in instanceof checks
-// phpcs:disable SlevomatCodingStandard.Namespaces.UnusedUses
-
 /**
  * Visitor to analyze @throws declarations and thrown exceptions
  */
@@ -199,7 +196,6 @@ final class ThrowsVisitor extends NodeVisitorAbstract
                     : $className;
                 $this->propertyTypes = [];
 
-                // Store parent class information for hierarchy analysis
                 if ($node instanceof Class_ && $node->extends !== null) {
                     $parentClass = $this->resolveClassName($node->extends->toString());
                     $this->classHierarchy[$this->currentClass] = $parentClass;
@@ -347,7 +343,6 @@ final class ThrowsVisitor extends NodeVisitorAbstract
                 $this->declaredThrows[] = $typeName;
             }
         } catch (Exception) {
-            // Ignore DocBlock parsing errors
         }
     }
 
@@ -701,9 +696,6 @@ final class ThrowsVisitor extends NodeVisitorAbstract
 
     /**
      * Check if thrown exception matches declared exception
-     * Thrown exception matches declared if:
-     * 1. They are the same exception
-     * 2. Thrown is a subclass of declared (thrown extends declared)
      *
      * @param string $thrown   Thrown exception type
      * @param string $declared Declared exception type
@@ -737,9 +729,6 @@ final class ThrowsVisitor extends NodeVisitorAbstract
             return true;
         }
 
-        // Check if declared is a parent of thrown (thrown extends declared)
-        // This means: throwing InvalidArgumentException is OK when Exception is declared
-        // But: throwing Exception is NOT OK when InvalidArgumentException is declared
         return $this->isThrownSubclassOfDeclared($thrownNormalized, $declaredNormalized);
     }
 
@@ -769,8 +758,6 @@ final class ThrowsVisitor extends NodeVisitorAbstract
 
     /**
      * Check if thrown exception is a subclass of declared exception
-     * This uses both collected class hierarchy and is_subclass_of with autoloading
-     * Returns true only if: thrown extends declared (one-directional check)
      *
      * @param string $thrown   Thrown exception type (normalized with leading backslash)
      * @param string $declared Declared exception type (normalized with leading backslash)
@@ -787,8 +774,6 @@ final class ThrowsVisitor extends NodeVisitorAbstract
         }
 
         try {
-            // is_subclass_of($child, $parent) returns true if $child extends $parent
-            // So we check: is thrown a subclass of declared?
             return is_subclass_of($thrownClass, $declaredClass, true);
         } catch (Exception) {
             return false;

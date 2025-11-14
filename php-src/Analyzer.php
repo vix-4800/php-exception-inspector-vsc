@@ -328,16 +328,13 @@ final class Analyzer
                 RecursiveDirectoryIterator::SKIP_DOTS
             );
 
-            // Filter directories at iterator level - more efficient than checking each file
             $filteredIterator = new RecursiveCallbackFilterIterator(
                 $directoryIterator,
                 static function (SplFileInfo $file) use ($excludeDirs): bool {
-                    // Always allow files
                     if ($file->isFile()) {
                         return $file->getExtension() === 'php';
                     }
 
-                    // Check if directory should be excluded
                     $basename = $file->getBasename();
 
                     return !in_array($basename, $excludeDirs, true);
@@ -350,7 +347,6 @@ final class Analyzer
                 $this->filesToAnalyze[] = $file->getPathname();
             }
         } catch (Exception) {
-            // Ignore errors during file collection
         }
     }
 
@@ -368,7 +364,6 @@ final class Analyzer
             RecursiveDirectoryIterator::SKIP_DOTS
         );
 
-        // Filter at iterator level - more efficient than RegexIterator
         $filteredIterator = new RecursiveCallbackFilterIterator(
             $directoryIterator,
             static function (SplFileInfo $file): bool {
@@ -376,7 +371,6 @@ final class Analyzer
                     return $file->getExtension() === 'php';
                 }
 
-                // Allow all directories
                 return true;
             }
         );
@@ -441,7 +435,6 @@ final class Analyzer
                 $this->cacheManager->setMethodThrows($filePath, $methodThrows);
             }
         } catch (Error) {
-            // Ignore parse errors in first pass
         }
     }
 
