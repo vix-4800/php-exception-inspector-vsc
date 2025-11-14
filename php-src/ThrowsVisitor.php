@@ -1,0 +1,593 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Vix\Vigil;
+
+use Exception;
+use phpDocumentor\Reflection\DocBlockFactory;
+use PhpParser\Comment\Doc;
+use PhpParser\Node;
+use PhpParser\Node\Expr;
+use PhpParser\Node\Expr\MethodCall;
+use PhpParser\Node\Expr\New_;
+use PhpParser\Node\Expr\PropertyFetch;
+use PhpParser\Node\Expr\StaticCall;
+use PhpParser\Node\Expr\Throw_;
+use PhpParser\Node\Expr\Variable;
+use PhpParser\Node\Identifier;
+use PhpParser\Node\Name;
+use PhpParser\Node\Stmt\Class_;
+use PhpParser\Node\Stmt\ClassMethod;
+use PhpParser\Node\Stmt\Function_;
+use PhpParser\Node\Stmt\Namespace_;
+use PhpParser\Node\Stmt\Trait_;
+use PhpParser\NodeVisitorAbstract;
+
+/**
+ * Visitor to analyze @throws declarations and thrown exceptions
+ */
+class ThrowsVisitor extends NodeVisitorAbstract
+{
+    /**
+     * Error records
+     *
+     * @var string[]
+     */
+    private array $errors = [];
+
+    /**
+     * DocBlock factory instance
+     *
+     * @var DocBlockFactory|null
+     */
+    private ?DocBlockFactory $docBlockFactory = null;
+
+    /**
+     * Current function or method name
+     *
+     * @var string|null
+     */
+    private ?string $currentFunction = null;
+
+    /**
+     * Current class name
+     *
+     * @var string|null
+     */
+    private ?string $currentClass = null;
+
+    /**
+     * Declared @throws for the current function/method
+     *
+     * @var string[]
+     */
+    private array $declaredThrows = [];
+
+    /**
+     * Actually thrown exceptions in the current function/method
+     *
+     * @var string[]
+     */
+    private array $actuallyThrown = [];
+
+    /**
+     * Map of method signatures to their declared @throws
+     * Format: ['ClassName::methodName' => ['ExceptionType1', 'ExceptionType2']]
+     *
+     * @var array<string, string[]>
+     */
+    private array $methodThrows = [];
+
+    /**
+     * Current namespace
+     *
+     * @var string|null
+     */
+    private ?string $currentNamespace = null;
+
+    /**
+     * Map of property names to their types in current class
+     * Format: ['propertyName' => 'Namespace\ClassName']
+     *
+     * @var array<string, string>
+     */
+    private array $propertyTypes = [];
+
+    /**
+     * Use imports for current file
+     * Format: ['Alias' => 'Fully\\Qualified\\Class']
+     *
+     * @var array<string, string>
+     */
+    private array $useImports = [];
+
+    /**
+     * Constructor
+     *
+     * @param string                  $filePath           File path being analyzed
+     * @param array<string, string[]> $globalMethodThrows Global method throws map
+     *
+     * @return void
+     */
+    public function __construct(
+        private readonly string $filePath,
+        private array $globalMethodThrows = [],
+    ) {
+        $this->docBlockFactory = DocBlockFactory::createInstance();
+    }
+
+    /**
+     * Get collected errors
+     *
+     * @return string[] Collected error records
+     */
+    public function getErrors(): array
+    {
+        return $this->errors;
+    }
+
+    /**
+     * Get collected method throws map
+     *
+     * @return array<string, string[]> Method throws map
+     */
+    public function getMethodThrows(): array
+    {
+        return $this->methodThrows;
+    }
+
+    /**
+     * Enter node callback
+     *
+     * @param Node $node Current node
+     *
+     * @return void
+     */
+    public function enterNode(Node $node): void
+    {
+        // Track namespace and collect use imports
+        if ($node instanceof Namespace_ && $node->name !== null) {
+            $this->currentNamespace = $node->name->toString();
+            $this->useImports = [];
+            foreach ($node->stmts as $stmt) {
+                if ($stmt instanceof \PhpParser\Node\Stmt\Use_) {
+                    foreach ($stmt->uses as $use) {
+                        $alias = $use->alias?->toString() ?? $use->name->getLast();
+                        $this->useImports[$alias] = $use->name->toString();
+                    }
+                }
+            }
+        }
+
+        // Track current class or trait
+        if ($node instanceof Class_ || $node instanceof Trait_) {
+            $className = $node->name?->toString();
+
+            if ($className !== null) {
+                $this->currentClass = $this->currentNamespace !== null
+                    ? $this->currentNamespace . '\\' . $className
+                    : $className;
+                $this->propertyTypes = []; // Reset property types for new class/trait
+            }
+        }
+
+        if ($node instanceof Function_ || $node instanceof ClassMethod) {
+            $this->currentFunction = $node->name->toString();
+            $this->declaredThrows = [];
+            $this->actuallyThrown = [];
+
+            $docComment = $node->getDocComment();
+
+            if ($docComment !== null) {
+                $this->parseDocBlock($docComment);
+            }
+
+            // Save method throws for later reference with fully qualified class name
+            // This must be AFTER parseDocBlock so that declaredThrows is populated
+            if ($this->currentClass !== null && $node instanceof ClassMethod) {
+                $methodSignature = $this->currentClass . '::' . $this->currentFunction;
+                $this->methodThrows[$methodSignature] = $this->declaredThrows;
+            }
+
+            // Extract promoted properties from constructor
+            if ($node instanceof ClassMethod && $node->name->toString() === '__construct') {
+                foreach ($node->getParams() as $param) {
+                    if ($param->flags !== 0 && $param->type instanceof Name) {
+                        $propertyName = $param->var->name;
+                        $typeName = $param->type->toString();
+
+                        // Resolve type name
+                        $fullTypeName = $param->type->isFullyQualified()
+                            ? $typeName
+                            : ($this->currentNamespace !== null
+                                ? $this->currentNamespace . '\\' . $typeName
+                                : $typeName);
+
+                        $this->propertyTypes[$propertyName] = $fullTypeName;
+                    }
+                }
+            }
+        }
+
+        if ($node instanceof Throw_) {
+            $this->analyzeThrow($node);
+        }
+
+        if ($node instanceof MethodCall) {
+            $this->analyzeMethodCall($node);
+        }
+
+        if ($node instanceof StaticCall) {
+            $this->analyzeStaticCall($node);
+        }
+    }
+
+    /**
+     * Leave node callback
+     *
+     * @param Node $node Current node
+     *
+     * @return void
+     */
+    public function leaveNode(Node $node): void
+    {
+        if ($node instanceof Class_ || $node instanceof Trait_) {
+            $this->currentClass = null;
+        }
+
+        if (!$node instanceof Function_ && !$node instanceof ClassMethod) {
+            return;
+        }
+
+        // Check for documented but not thrown exceptions
+        foreach ($this->declaredThrows as $declared) {
+            $isActuallyThrown = false;
+
+            foreach ($this->actuallyThrown as $thrown) {
+                if ($this->isExceptionMatching($thrown, $declared)) {
+                    $isActuallyThrown = true;
+
+                    break;
+                }
+            }
+
+            if (!$isActuallyThrown) {
+                $this->errors[] = [
+                    'line' => $node->getStartLine(),
+                    'type' => 'unnecessary_throws',
+                    'exception' => $declared,
+                    'function' => $this->currentFunction,
+                    'message' => "Exception '{$declared}' is documented in @throws but never thrown",
+                ];
+            }
+        }
+
+        $this->currentFunction = null;
+        $this->declaredThrows = [];
+        $this->actuallyThrown = [];
+    }
+
+    /**
+     * Parse DocBlock for @throws tags
+     *
+     * @param Doc $docComment DocBlock comment
+     *
+     * @return void
+     */
+    private function parseDocBlock(Doc $docComment): void
+    {
+        try {
+            $docBlock = $this->docBlockFactory->create($docComment->getText());
+
+            foreach ($docBlock->getTagsByName('throws') as $tag) {
+                $type = $tag->getType();
+
+                if ($type === null) {
+                    return;
+                }
+
+                $typeName = (string) $type;
+
+                $typeName = ltrim($typeName, '\\');
+                $this->declaredThrows[] = $typeName;
+            }
+        } catch (Exception) {
+            // Ignore DocBlock parsing errors
+        }
+    }
+
+    /**
+     * Analyze a throw statement
+     *
+     * @param Throw_ $node Throw node
+     *
+     * @return void
+     */
+    private function analyzeThrow(Throw_ $node): void
+    {
+        $exceptionType = $this->getExceptionType($node->expr);
+
+        if ($exceptionType === null) {
+            return;
+        }
+
+        // Track that this exception is actually thrown
+        $this->actuallyThrown[] = $exceptionType;
+
+        $isDocumented = false;
+
+        foreach ($this->declaredThrows as $declared) {
+            if ($this->isExceptionMatching($exceptionType, $declared)) {
+                $isDocumented = true;
+
+                break;
+            }
+        }
+
+        if ($isDocumented) {
+            return;
+        }
+
+        $this->errors[] = [
+            'line' => $node->getStartLine(),
+            'type' => 'undeclared_throw',
+            'exception' => $exceptionType,
+            'function' => $this->currentFunction,
+            'message' => "Exception '{$exceptionType}' is thrown but not declared in @throws tag",
+        ];
+    }
+
+    /**
+     * Analyze a method call
+     *
+     * @param MethodCall $node Method call node
+     *
+     * @return void
+     */
+    private function analyzeMethodCall(MethodCall $node): void
+    {
+        // Get method name
+        if (!$node->name instanceof Identifier) {
+            return;
+        }
+
+        $methodName = $node->name->toString();
+
+        // Determine the class of the called method
+        $calledClass = null;
+
+        if ($node->var instanceof Variable && $node->var->name === 'this') {
+            // $this->method() - use current class
+            $calledClass = $this->currentClass;
+        } elseif ($node->var instanceof PropertyFetch) {
+            // $this->property->method() - try to resolve property type
+            $calledClass = $this->resolvePropertyType($node->var);
+        }
+
+        if ($calledClass === null) {
+            return;
+        }
+
+        // Build method signature
+        $methodSignature = $calledClass . '::' . $methodName;
+
+        // Check local method throws first
+        $calledMethodThrows = $this->methodThrows[$methodSignature] ?? null;
+
+        // If not found locally, check global map
+        if ($calledMethodThrows === null) {
+            $calledMethodThrows = $this->globalMethodThrows[$methodSignature] ?? null;
+        }
+
+        if (in_array($calledMethodThrows, [null, []], true)) {
+            return;
+        }
+
+        // Check if each exception from called method is declared in current method
+        foreach ($calledMethodThrows as $thrownException) {
+            $isDocumented = false;
+
+            foreach ($this->declaredThrows as $declared) {
+                if ($this->isExceptionMatching($thrownException, $declared)) {
+                    $isDocumented = true;
+
+                    break;
+                }
+            }
+
+            // Track that these exceptions can be thrown from this method
+            // We add them to actuallyThrown regardless of whether they're documented
+            // so that the leaveNode check knows these exceptions are actually thrown
+            $this->actuallyThrown[] = $thrownException;
+
+            if ($isDocumented) {
+                continue;
+            }
+
+            $this->errors[] = [
+                'line' => $node->getStartLine(),
+                'type' => 'undeclared_throw_from_call',
+                'exception' => $thrownException,
+                'function' => $this->currentFunction,
+                'called_method' => $methodName,
+                'called_class' => $calledClass,
+                'message' => "Exception '{$thrownException}' can be thrown by '{$methodName}()'"
+                    . ' but is not declared in @throws tag',
+            ];
+        }
+    }
+
+    /**
+     * Analyze a static method call
+     *
+     * @param StaticCall $node Static call node
+     *
+     * @return void
+     */
+    private function analyzeStaticCall(StaticCall $node): void
+    {
+        // Get method name
+        if (!$node->name instanceof Identifier) {
+            return;
+        }
+
+        $methodName = $node->name->toString();
+
+        // Determine the class of the called static method
+        $calledClass = null;
+
+        if ($node->class instanceof Name) {
+            $className = $node->class->toString();
+
+            // Handle self, static, parent keywords
+            if (in_array($className, ['self', 'static'], true)) {
+                $calledClass = $this->currentClass;
+            } elseif ($className === 'parent') {
+                // We can't easily resolve parent class without reflection
+                // Skip parent calls for now
+                return;
+            } else {
+                // Resolve class name
+                if ($node->class->isFullyQualified()) {
+                    $calledClass = $className;
+                } elseif (isset($this->useImports[$className])) {
+                    $calledClass = $this->useImports[$className];
+                } else {
+                    // Try to resolve with current namespace
+                    $calledClass = $this->currentNamespace !== null
+                        ? $this->currentNamespace . '\\' . $className
+                        : $className;
+                }
+            }
+        }
+
+        if ($calledClass === null) {
+            return;
+        }
+
+        // Build method signature
+        $methodSignature = $calledClass . '::' . $methodName;
+
+        // Check local method throws first
+        $calledMethodThrows = $this->methodThrows[$methodSignature] ?? null;
+
+        // If not found locally, check global map
+        if ($calledMethodThrows === null) {
+            $calledMethodThrows = $this->globalMethodThrows[$methodSignature] ?? null;
+        }
+
+        if (in_array($calledMethodThrows, [null, []], true)) {
+            return;
+        }
+
+        // Check if each exception from called method is declared in current method
+        foreach ($calledMethodThrows as $thrownException) {
+            $isDocumented = false;
+
+            foreach ($this->declaredThrows as $declared) {
+                if ($this->isExceptionMatching($thrownException, $declared)) {
+                    $isDocumented = true;
+
+                    break;
+                }
+            }
+
+            // Track that these exceptions can be thrown from this method
+            $this->actuallyThrown[] = $thrownException;
+
+            if ($isDocumented) {
+                continue;
+            }
+
+            $this->errors[] = [
+                'line' => $node->getStartLine(),
+                'type' => 'undeclared_throw_from_call',
+                'exception' => $thrownException,
+                'function' => $this->currentFunction,
+                'called_method' => $methodName,
+                'called_class' => $calledClass,
+                'message' => "Exception '{$thrownException}' can be thrown by '{$calledClass}::{$methodName}()'"
+                    . ' but is not declared in @throws tag',
+            ];
+        }
+    }
+
+    /**
+     * Resolve property type from PropertyFetch node
+     *
+     * @param PropertyFetch $node Property fetch node
+     *
+     * @return string|null Resolved class name or null
+     */
+    private function resolvePropertyType(PropertyFetch $node): ?string
+    {
+        // For now, we can only resolve $this->property
+        if (!$node->var instanceof Variable || $node->var->name !== 'this') {
+            return null;
+        }
+
+        if (!$node->name instanceof Identifier) {
+            return null;
+        }
+
+        $propertyName = $node->name->toString();
+
+        // Look up the property type from our collected types
+        return $this->propertyTypes[$propertyName] ?? null;
+    }
+
+    /**
+     * Get exception type from throw expression
+     *
+     * @param Expr $expr Throw expression
+     *
+     * @return string|null Exception type or null if undeterminable
+     */
+    private function getExceptionType(Expr $expr): ?string
+    {
+        if ($expr instanceof New_ && $expr->class instanceof Name) {
+            $name = $expr->class->toString();
+
+            // Normalize: always return with leading backslash for fully qualified names
+            if ($expr->class->isFullyQualified()) {
+                return '\\' . ltrim($name, '\\');
+            }
+
+            return $name;
+        }
+
+        if ($expr instanceof Variable) {
+            return null;
+        }
+
+        return null;
+    }
+
+    /**
+     * Check if thrown exception matches declared exception
+     *
+     * @param string $thrown   Thrown exception type
+     * @param string $declared Declared exception type
+     *
+     * @return bool True if matches, false otherwise
+     */
+    private function isExceptionMatching(string $thrown, string $declared): bool
+    {
+        if ($thrown === $declared) {
+            return true;
+        }
+
+        $thrownShort = mb_substr($thrown, mb_strrpos($thrown, '\\') + 1);
+        $declaredShort = mb_substr($declared, mb_strrpos($declared, '\\') + 1);
+
+        if ($thrownShort === $declaredShort) {
+            return true;
+        }
+
+        $thrownNormalized = '\\' . ltrim($thrown, '\\');
+        $declaredNormalized = '\\' . ltrim($declared, '\\');
+
+        return $thrownNormalized === $declaredNormalized;
+    }
+}

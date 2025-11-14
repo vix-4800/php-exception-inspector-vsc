@@ -3,3 +3,9 @@ node_modules
 .vscode-test/
 *.vsix
 .DS_Store
+
+/vendor/
+/.phpunit.cache/
+/coverage.xml
+/.phpunit.result.cache
+/tests/debug.php

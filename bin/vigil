@@ -1,0 +1,26 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+$autoloadPaths = [
+    __DIR__ . '/../vendor/autoload.php',
+    __DIR__ . '/../../../autoload.php',
+];
+
+foreach ($autoloadPaths as $autoloadPath) {
+    if (file_exists($autoloadPath)) {
+        require_once $autoloadPath;
+
+        break;
+    }
+}
+
+use Symfony\Component\Console\Application;
+use Vix\Vigil\Command\AnalyzeCommand;
+
+$application = new Application('Vigil', '0.1.0');
+$application->add(new AnalyzeCommand());
+$application->setDefaultCommand('analyze', true);
+
+$application->run();
