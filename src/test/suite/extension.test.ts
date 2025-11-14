@@ -5,25 +5,25 @@ suite('Extension Test Suite', () => {
   vscode.window.showInformationMessage('Start all tests.');
 
   test('Extension should be present', () => {
-    assert.ok(vscode.extensions.getExtension('undefined_publisher.vigil-analyzer'));
+    assert.ok(vscode.extensions.getExtension('vix.php-exception-inspector'));
   });
 
-  test('Should activate extension', async function() {
+  test('Should activate extension', async function () {
     this.timeout(60000);
-    const extension = vscode.extensions.getExtension('undefined_publisher.vigil-analyzer');
+    const extension = vscode.extensions.getExtension('vix.php-exception-inspector');
     if (extension) {
       await extension.activate();
       assert.ok(extension.isActive);
     }
   });
 
-  test('Should register vigil.analyzeFile command', async () => {
+  test('Should register phpExceptionInspector.analyzeFile command', async () => {
     const commands = await vscode.commands.getCommands(true);
-    assert.ok(commands.includes('vigil.analyzeFile'));
+    assert.ok(commands.includes('phpExceptionInspector.analyzeFile'));
   });
 
   test('Should have proper configuration', () => {
-    const config = vscode.workspace.getConfiguration('vigil');
+    const config = vscode.workspace.getConfiguration('phpExceptionInspector');
     assert.ok(config !== undefined);
 
     // Check if default values exist

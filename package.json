@@ -1,7 +1,7 @@
 {
-    "name": "vigil-analyzer",
-    "displayName": "Vigil PHP Analyzer",
-    "description": "Analyze PHP code for undocumented @throws tags using Vigil",
+    "name": "php-exception-inspector",
+    "displayName": "PHP Exception Inspector",
+    "description": "Analyze PHP code for undocumented @throws tags and exception handling",
     "publisher": "vix",
     "repository": {
         "type": "git",
@@ -14,6 +14,17 @@
     "categories": [
         "Linters"
     ],
+    "keywords": [
+        "php",
+        "exception",
+        "throws",
+        "static analysis",
+        "linter",
+        "docblock",
+        "analyzer",
+        "inspector",
+        "error handling"
+    ],
     "activationEvents": [
         "onLanguage:php"
     ],
@@ -21,29 +32,29 @@
     "contributes": {
         "commands": [
             {
-                "command": "vigil.analyzeFile",
-                "title": "Vigil: Analyze Current File"
+                "command": "phpExceptionInspector.analyzeFile",
+                "title": "PHP Exception Inspector: Analyze Current File"
             }
         ],
         "configuration": {
-            "title": "Vigil PHP Analyzer",
+            "title": "PHP Exception Inspector",
             "properties": {
-                "vigil.executablePath": {
+                "phpExceptionInspector.executablePath": {
                     "type": "string",
                     "default": "",
                     "description": "Path to vigil executable. If empty, will search in workspace and PATH"
                 },
-                "vigil.analyzeOnSave": {
+                "phpExceptionInspector.analyzeOnSave": {
                     "type": "boolean",
                     "default": true,
                     "description": "Automatically analyze PHP files on save"
                 },
-                "vigil.analyzeOnOpen": {
+                "phpExceptionInspector.analyzeOnOpen": {
                     "type": "boolean",
                     "default": true,
                     "description": "Automatically analyze PHP files when opened"
                 },
-                "vigil.noProjectScan": {
+                "phpExceptionInspector.noProjectScan": {
                     "type": "boolean",
                     "default": false,
                     "description": "Disable automatic project-wide scanning (faster but less accurate for single files)"

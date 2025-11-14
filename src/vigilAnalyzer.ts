@@ -36,7 +36,7 @@ export class VigilAnalyzer {
 
   constructor(diagnosticCollection: vscode.DiagnosticCollection) {
     this.diagnosticCollection = diagnosticCollection;
-    this.outputChannel = vscode.window.createOutputChannel('Vigil');
+    this.outputChannel = vscode.window.createOutputChannel('PHP Exception Inspector');
     this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
   }
 
@@ -44,7 +44,7 @@ export class VigilAnalyzer {
    * Find vigil executable path
    */
   private findVigilExecutable(): string | null {
-    const config = vscode.workspace.getConfiguration('vigil');
+    const config = vscode.workspace.getConfiguration('phpExceptionInspector');
     const configuredPath = config.get<string>('executablePath');
 
     // If user configured a path, use it
@@ -127,7 +127,7 @@ export class VigilAnalyzer {
    */
   private runVigil(vigilPath: string, filePath: string): Promise<VigilResult> {
     return new Promise((resolve, reject) => {
-      const config = vscode.workspace.getConfiguration('vigil');
+      const config = vscode.workspace.getConfiguration('phpExceptionInspector');
       const noProjectScan = config.get<boolean>('noProjectScan', false);
 
       const args = [filePath];

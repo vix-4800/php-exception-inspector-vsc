@@ -7,7 +7,9 @@ suite('VigilAnalyzer Test Suite', () => {
   let analyzer: VigilAnalyzer;
 
   setup(() => {
-    diagnosticCollection = vscode.languages.createDiagnosticCollection('vigil-test');
+    diagnosticCollection = vscode.languages.createDiagnosticCollection(
+      'php-exception-inspector-test'
+    );
     analyzer = new VigilAnalyzer(diagnosticCollection);
   });
 
