@@ -41,46 +41,20 @@ export class InspectorAnalyzer {
   }
 
   /**
-   * Find Inspector executable path
+   * Find Inspector executable path in the extension's php-bin directory
    */
   private findInspectorExecutable(): string | null {
-    const config = vscode.workspace.getConfiguration('phpExceptionInspector');
-    const configuredPath = config.get<string>('executablePath');
-
-    // If user configured a path, use it
-    if (configuredPath && fs.existsSync(configuredPath)) {
-      return configuredPath;
-    }
-
-    // Look for Inspector in workspace
     const workspaceFolders = vscode.workspace.workspaceFolders;
-    if (workspaceFolders) {
-      for (const folder of workspaceFolders) {
-        // Check for bin/php-exception-inspector in workspace root
-        const inspectorPath = path.join(folder.uri.fsPath, 'bin', 'php-exception-inspector');
-        if (fs.existsSync(inspectorPath)) {
-          return inspectorPath;
-        }
-
-        // Check for ../bin/php-exception-inspector (if extension is in subdirectory)
-        const parentInspectorPath = path.join(
-          folder.uri.fsPath,
-          '..',
-          'bin',
-          'php-exception-inspector'
-        );
-        if (fs.existsSync(parentInspectorPath)) {
-          return parentInspectorPath;
-        }
-      }
+    if (!workspaceFolders) {
+      return null;
     }
 
-    // Try to find in PATH
-    try {
-      child_process.execSync('which php-exception-inspector', { encoding: 'utf-8' });
-      return 'php-exception-inspector';
-    } catch {
-      // php-exception-inspector not found in PATH
+    // Look for php-bin/php-exception-inspector in workspace root
+    for (const folder of workspaceFolders) {
+      const inspectorPath = path.join(folder.uri.fsPath, 'php-bin', 'php-exception-inspector');
+      if (fs.existsSync(inspectorPath)) {
+        return inspectorPath;
+      }
     }
 
     return null;
@@ -101,7 +75,7 @@ export class InspectorAnalyzer {
     const inspectorPath = this.findInspectorExecutable();
     if (!inspectorPath) {
       const message =
-        'PHP Exception Inspector executable not found. Please install PHP Exception Inspector or configure the path in settings.';
+        'PHP Exception Inspector executable not found in php-bin/. Please ensure the extension is properly installed.';
       this.outputChannel.appendLine(`Error: ${message}`);
       vscode.window.showErrorMessage(message);
       return;

@@ -7,3 +7,11 @@ tsconfig.json
 **/*.map
 **/*.ts
 node_modules/**
+php-src/**
+php-tests/**
+vendor/**
+composer.json
+composer.lock
+phpunit.xml
+eslint.config.mjs
+!php-bin/**

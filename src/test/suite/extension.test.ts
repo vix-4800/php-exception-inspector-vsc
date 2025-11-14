@@ -27,12 +27,12 @@ suite('Extension Test Suite', () => {
     assert.ok(config !== undefined);
 
     // Check if default values exist
-    const executablePath = config.get('executablePath');
     const analyzeOnSave = config.get('analyzeOnSave');
     const analyzeOnOpen = config.get('analyzeOnOpen');
+    const noProjectScan = config.get('noProjectScan');
 
-    assert.strictEqual(typeof executablePath, 'string');
     assert.strictEqual(typeof analyzeOnSave, 'boolean');
     assert.strictEqual(typeof analyzeOnOpen, 'boolean');
+    assert.strictEqual(typeof noProjectScan, 'boolean');
   });
 });

@@ -16,11 +16,14 @@ A Visual Studio Code extension that analyzes PHP code for undocumented exception
 
 This extension contributes the following settings:
 
-- `phpExceptionInspector.executablePath`: Path to executable. If empty, will search in workspace and PATH
 - `phpExceptionInspector.analyzeOnSave`: Automatically analyze PHP files on save (default: `true`)
 - `phpExceptionInspector.analyzeOnOpen`: Automatically analyze PHP files when opened (default: `true`)
 - `phpExceptionInspector.noProjectScan`: Disable automatic project-wide scanning for faster single file analysis
   (default: `false`)
+
+## Requirements
+
+This extension includes the PHP analyzer as part of the package. PHP 8.1 or higher is required on your system.
 
 ## Usage
 

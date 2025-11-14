@@ -39,11 +39,6 @@
         "configuration": {
             "title": "PHP Exception Inspector",
             "properties": {
-                "phpExceptionInspector.executablePath": {
-                    "type": "string",
-                    "default": "",
-                    "description": "Path to php-exception-inspector executable. If empty, will search in workspace and PATH"
-                },
                 "phpExceptionInspector.analyzeOnSave": {
                     "type": "boolean",
                     "default": true,

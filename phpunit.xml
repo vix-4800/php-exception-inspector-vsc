@@ -8,12 +8,12 @@
     cacheDirectory=".phpunit.cache">
     <testsuites>
         <testsuite name="PHP Exception Inspector Test Suite">
-            <directory>tests/Unit</directory>
+            <directory>php-tests/Unit</directory>
         </testsuite>
     </testsuites>
     <source>
         <include>
-            <directory>src</directory>
+            <directory>php-src</directory>
         </include>
     </source>
 </phpunit>
