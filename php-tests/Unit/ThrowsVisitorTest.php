@@ -27,7 +27,7 @@ PHP;
 
         $this->assertCount(1, $errors);
         $this->assertEquals('undeclared_throw', $errors[0]['type']);
-        $this->assertEquals('\Exception', $errors[0]['exception']);
+        $this->assertEquals('Exception', $errors[0]['exception']);
     }
 
     public function testNoErrorsForDocumentedThrow(): void
@@ -88,7 +88,7 @@ PHP;
 
         // Only RuntimeException should be reported
         $this->assertCount(1, $errors);
-        $this->assertEquals('\RuntimeException', $errors[0]['exception']);
+        $this->assertEquals('RuntimeException', $errors[0]['exception']);
     }
 
     public function testFunctionWithoutDocblock(): void
