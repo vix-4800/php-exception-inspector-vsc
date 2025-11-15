@@ -378,7 +378,7 @@ final class Analyzer
      */
     private function collectFilesExcludingVendor(string $directory): void
     {
-        $excludeDirs = ['vendor', 'node_modules', 'cache', 'var', 'storage', 'temp'];
+        $excludeDirs = ['vendor', 'node_modules', 'cache', 'var', 'storage', 'temp', 'assets', 'public', 'web'];
 
         try {
             $directoryIterator = new RecursiveDirectoryIterator(
@@ -399,18 +399,26 @@ final class Analyzer
                 }
             );
 
-            $iterator = new RecursiveIteratorIterator($filteredIterator);
+            $iterator = new RecursiveIteratorIterator(
+                $filteredIterator,
+                RecursiveIteratorIterator::CATCH_GET_CHILD
+            );
 
             foreach ($iterator as $file) {
-                $filePath = $file->getPathname();
+                try {
+                    $filePath = $file->getPathname();
 
-                if ($this->shouldExcludeFile($filePath)) {
-                    continue;
+                    if ($this->shouldExcludeFile($filePath)) {
+                        continue;
+                    }
+
+                    $this->filesToAnalyze[] = $filePath;
+                } catch (Exception $e) {
+                    error_log("PHP Exception Inspector: Skipping file due to error: {$e->getMessage()}");
                 }
-
-                $this->filesToAnalyze[] = $filePath;
             }
-        } catch (Exception) {
+        } catch (Exception $e) {
+            error_log("PHP Exception Inspector: Error scanning directory {$directory}: {$e->getMessage()}");
         }
     }
 
@@ -439,16 +447,27 @@ final class Analyzer
             }
         );
 
-        $iterator = new RecursiveIteratorIterator($filteredIterator);
+        try {
+            $iterator = new RecursiveIteratorIterator(
+                $filteredIterator,
+                RecursiveIteratorIterator::CATCH_GET_CHILD
+            );
 
-        foreach ($iterator as $file) {
-            $filePath = $file->getPathname();
+            foreach ($iterator as $file) {
+                try {
+                    $filePath = $file->getPathname();
 
-            if ($this->shouldExcludeFile($filePath)) {
-                continue;
+                    if ($this->shouldExcludeFile($filePath)) {
+                        continue;
+                    }
+
+                    $this->filesToAnalyze[] = $filePath;
+                } catch (Exception $e) {
+                    error_log("PHP Exception Inspector: Skipping file due to error: {$e->getMessage()}");
+                }
             }
-
-            $this->filesToAnalyze[] = $filePath;
+        } catch (Exception $e) {
+            error_log("PHP Exception Inspector: Error scanning directory {$directory}: {$e->getMessage()}");
         }
     }
 
