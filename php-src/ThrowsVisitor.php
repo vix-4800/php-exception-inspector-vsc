@@ -429,6 +429,14 @@ final class ThrowsVisitor extends NodeVisitorAbstract
             return;
         }
 
+        if (BuiltinFunctionThrows::hasConditionalThrow($functionName)) {
+            $willThrow = BuiltinFunctionThrows::willThrowWithArgs($functionName, $node->args);
+
+            if ($willThrow === false) {
+                return;
+            }
+        }
+
         foreach ($builtinThrows as $exceptionType) {
             if ($this->isExceptionCaught($exceptionType)) {
                 continue;

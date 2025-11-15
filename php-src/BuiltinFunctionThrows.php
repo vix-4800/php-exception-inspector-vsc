@@ -8,6 +8,11 @@ use DateMalformedStringException;
 use IntlException;
 use JsonException;
 use PDOException;
+use PhpParser\Node\Arg;
+use PhpParser\Node\Expr;
+use PhpParser\Node\Expr\BinaryOp\BitwiseOr;
+use PhpParser\Node\Expr\ConstFetch;
+use PhpParser\Node\Scalar\LNumber;
 use Random\RandomException;
 use SocketException;
 use ValueError;
@@ -152,5 +157,109 @@ final class BuiltinFunctionThrows
     public static function getAllFunctions(): array
     {
         return array_keys(self::FUNCTION_THROWS_MAP);
+    }
+
+    /**
+     * Check if a function requires specific conditions to throw exceptions
+     *
+     * @param string $functionName Function name
+     *
+     * @return bool True if function has conditional throw behavior
+     */
+    public static function hasConditionalThrow(string $functionName): bool
+    {
+        return in_array($functionName, ['json_encode', 'json_decode'], true);
+    }
+
+    /**
+     * Check if function call arguments satisfy throw conditions
+     * Returns true if the function WILL throw, false if it WON'T throw, null if unknown
+     *
+     * @param string $functionName Function name
+     * @param array<Arg> $args Function arguments
+     *
+     * @return bool|null True if will throw, false if won't throw, null if cannot determine
+     */
+    public static function willThrowWithArgs(string $functionName, array $args): ?bool
+    {
+        switch ($functionName) {
+            case 'json_encode':
+                return self::hasJsonThrowOnErrorFlag($args, 1);
+            case 'json_decode':
+                return self::hasJsonThrowOnErrorFlag($args, 3);
+            default:
+                return true;
+        }
+    }
+
+    /**
+     * Check if JSON_THROW_ON_ERROR flag is present in function arguments
+     *
+     * @param array<Arg> $args Function arguments
+     * @param int $flagPosition Position of flags argument (0-based)
+     *
+     * @return bool|null True if flag is present, false if explicitly not present, null if cannot determine
+     */
+    private static function hasJsonThrowOnErrorFlag(array $args, int $flagPosition): ?bool
+    {
+        if (!isset($args[$flagPosition])) {
+            return false;
+        }
+
+        $flagArg = $args[$flagPosition]->value;
+
+        if ($flagArg instanceof ConstFetch) {
+            $constName = $flagArg->name->toString();
+
+            if ($constName === 'JSON_THROW_ON_ERROR') {
+                return true;
+            }
+        }
+
+        if ($flagArg instanceof BitwiseOr) {
+            return self::hasFlagInBitwiseOr($flagArg, 'JSON_THROW_ON_ERROR');
+        }
+
+        if ($flagArg instanceof LNumber) {
+            // Check if bit 2 (value 4) is set
+            return ($flagArg->value & 4) === 4;
+        }
+
+        return null;
+    }
+
+    /**
+     * Recursively check if a flag constant is present in a bitwise OR expression
+     *
+     * @param BitwiseOr $expr Bitwise OR expression
+     * @param string $flagName Flag constant name to search for
+     *
+     * @return bool True if flag is found
+     */
+    private static function hasFlagInBitwiseOr(BitwiseOr $expr, string $flagName): bool
+    {
+        return self::checkBitwiseOrSide($expr->left, $flagName)
+            || self::checkBitwiseOrSide($expr->right, $flagName);
+    }
+
+    /**
+     * Check one side of a bitwise OR expression for the flag
+     *
+     * @param Expr $side Expression side to check
+     * @param string $flagName Flag constant name to search for
+     *
+     * @return bool True if flag is found
+     */
+    private static function checkBitwiseOrSide(Expr $side, string $flagName): bool
+    {
+        if ($side instanceof ConstFetch) {
+            return $side->name->toString() === $flagName;
+        }
+
+        if ($side instanceof BitwiseOr) {
+            return self::hasFlagInBitwiseOr($side, $flagName);
+        }
+
+        return false;
     }
 }
