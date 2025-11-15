@@ -1,0 +1,7 @@
+{
+    "output": "php-exception-inspector.phar",
+    "compression": "GZ",
+    "directories": ["php-src", "vendor"],
+    "main": "php-bin/php-exception-inspector",
+    "stub": true
+}

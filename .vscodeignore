@@ -1,19 +1,45 @@
+# Development directories
 .vscode/**
 .vscode-test/**
 .github/**
+.husky/**
+.git/**
+.rector-tmp/**
+--help/**
+
+# Source files (compiled to out/)
 src/**
-.gitignore
-.yarnrc
-tsconfig.json
-**/*.map
 **/*.ts
+**/*.map
+
+# Dependencies (bundled in PHAR)
 node_modules/**
+php-src/**
+php-bin/**
+vendor/**
+
+# Test files
 php-tests/**
+out/test/**
+
+# Development files
+.gitignore
+tsconfig.json
 composer.json
 composer.lock
 phpunit.xml
 eslint.config.mjs
 .phpunit.cache/**
-!php-bin/**
-!php-src/**
-!vendor/**
+box.json
+Makefile
+
+# Include only necessary files
+!php-exception-inspector.phar
+!out/extension.js
+!out/InspectorAnalyzer.js
+!out/ThrowsCodeActionProvider.js
+!out/vigilAnalyzer.js
+!icon.png
+!README.md
+!LICENSE
+!package.json

@@ -75,10 +75,14 @@ export class InspectorAnalyzer {
    * Find Inspector executable path in the extension's php-bin directory
    */
   private findInspectorExecutable(): string | null {
-    const inspectorPath = path.join(this.extensionPath, 'php-bin', 'php-exception-inspector');
+    const pharPath = path.join(this.extensionPath, 'php-exception-inspector.phar');
+    if (fs.existsSync(pharPath)) {
+      return pharPath;
+    }
 
-    if (fs.existsSync(inspectorPath)) {
-      return inspectorPath;
+    const scriptPath = path.join(this.extensionPath, 'php-exception-inspector');
+    if (fs.existsSync(scriptPath)) {
+      return scriptPath;
     }
 
     return null;

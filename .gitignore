@@ -10,3 +10,4 @@ node_modules
 /.phpunit.result.cache
 /tests/debug.php
 .php-exception-inspector-cache.json
+*.phar
