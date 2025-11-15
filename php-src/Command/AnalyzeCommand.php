@@ -61,6 +61,18 @@ final class AnalyzeCommand extends Command
                 null,
                 InputOption::VALUE_IS_ARRAY | InputOption::VALUE_REQUIRED,
                 'Regex patterns to exclude files/directories (can be specified multiple times)'
+            )
+            ->addOption(
+                'no-cache',
+                null,
+                InputOption::VALUE_NONE,
+                'Disable caching of analysis results'
+            )
+            ->addOption(
+                'clear-cache',
+                null,
+                InputOption::VALUE_NONE,
+                'Clear the cache before analysis'
             );
     }
 
@@ -101,13 +113,15 @@ final class AnalyzeCommand extends Command
         try {
             $analyzer = new Analyzer();
             $useProjectScan = !$input->getOption('no-project-scan');
+            $disableCache = $input->getOption('no-cache');
+            $clearCache = $input->getOption('clear-cache');
             $excludePatterns = $input->getOption('exclude-pattern');
 
             if (!is_array($excludePatterns)) {
                 $excludePatterns = [];
             }
 
-            $results = $analyzer->analyze($path, $useProjectScan, $excludePatterns);
+            $results = $analyzer->analyze($path, $useProjectScan, $excludePatterns, $disableCache, $clearCache);
 
             $output->writeln(json_encode($results, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
 

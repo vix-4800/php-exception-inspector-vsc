@@ -21,6 +21,8 @@ This extension contributes the following settings:
 - `phpExceptionInspector.analyzeOnOpen`: Automatically analyze PHP files when opened (default: `true`)
 - `phpExceptionInspector.noProjectScan`: Disable automatic project-wide scanning for faster single file analysis
   (default: `false`)
+- `phpExceptionInspector.disableCache`: Disable caching of analysis results (useful for testing or when cache causes issues)
+  (default: `false`)
 - `phpExceptionInspector.excludePatterns`: Array of regex patterns to exclude files and directories from analysis
   (default: `["/vendor/", "/node_modules/", "/\\.git/", "/\\.(?:idea|vscode|cache|config)/"]`)
 

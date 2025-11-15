@@ -55,6 +55,11 @@
                     "default": false,
                     "description": "Disable automatic project-wide scanning (faster but less accurate for single files)"
                 },
+                "phpExceptionInspector.disableCache": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Disable caching of analysis results (use for testing or when cache causes issues)"
+                },
                 "phpExceptionInspector.maxLogLines": {
                     "type": "number",
                     "default": 1000,

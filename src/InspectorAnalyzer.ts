@@ -128,11 +128,16 @@ export class InspectorAnalyzer {
     return new Promise((resolve, reject) => {
       const config = vscode.workspace.getConfiguration('phpExceptionInspector');
       const noProjectScan = config.get<boolean>('noProjectScan', false);
+      const disableCache = config.get<boolean>('disableCache', false);
       const excludePatterns = config.get<string[]>('excludePatterns', []);
 
       const args = [filePath];
       if (noProjectScan) {
         args.unshift('--no-project-scan');
+      }
+
+      if (disableCache) {
+        args.unshift('--no-cache');
       }
 
       for (const pattern of excludePatterns) {

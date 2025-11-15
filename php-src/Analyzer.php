@@ -88,13 +88,15 @@ final class Analyzer
      * @param string   $path                   File or directory path
      * @param bool     $useProjectWideAnalysis Whether to scan entire project for context
      * @param string[] $excludePatterns        Custom regex patterns to exclude files/directories
+     * @param bool     $disableCache           Whether to disable caching
+     * @param bool     $clearCache             Whether to clear cache before analysis
      *
      * @return array<string, mixed> Analysis results
      *
      * @throws InvalidArgumentException
      * @throws JsonException
      */
-    public function analyze(string $path, bool $useProjectWideAnalysis = true, array $excludePatterns = []): array
+    public function analyze(string $path, bool $useProjectWideAnalysis = true, array $excludePatterns = [], bool $disableCache = false, bool $clearCache = false): array
     {
         $startTime = microtime(true);
 
@@ -127,15 +129,25 @@ final class Analyzer
                 $this->projectRoot = $this->findProjectRoot($path);
 
                 if ($this->projectRoot !== null) {
-                    $this->cacheManager = new CacheManager($this->projectRoot);
-                    $this->cacheManager->load();
+                    if (!$disableCache) {
+                        $this->cacheManager = new CacheManager($this->projectRoot);
+                        if ($clearCache) {
+                            $this->cacheManager->clear();
+                        }
+                        $this->cacheManager->load();
+                    }
                     $this->collectProjectFiles($this->projectRoot);
                 }
             }
         } elseif (is_dir($path)) {
             $this->projectRoot = $path;
-            $this->cacheManager = new CacheManager($this->projectRoot);
-            $this->cacheManager->load();
+            if (!$disableCache) {
+                $this->cacheManager = new CacheManager($this->projectRoot);
+                if ($clearCache) {
+                    $this->cacheManager->clear();
+                }
+                $this->cacheManager->load();
+            }
             $this->collectFiles($path);
         } else {
             throw new InvalidArgumentException("Path does not exist: {$path}");
