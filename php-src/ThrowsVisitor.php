@@ -939,6 +939,39 @@ final class ThrowsVisitor extends NodeVisitorAbstract
             }
         }
 
+        if ($methodThrows === null && isset($this->classHierarchy[$calledClass])) {
+            $parentClass = $this->classHierarchy[$calledClass];
+            $maxDepth = 50;
+            $depth = 0;
+
+            while ($parentClass !== null && $depth < $maxDepth) {
+                $parentMethodSignature = "{$parentClass}::{$methodName}";
+                $methodThrows = $this->methodThrows[$parentMethodSignature]
+                    ?? $this->globalMethodThrows[$parentMethodSignature]
+                    ?? null;
+
+                if ($methodThrows !== null) {
+                    break;
+                }
+
+                if (isset($this->classTraits[$parentClass])) {
+                    foreach ($this->classTraits[$parentClass] as $traitName) {
+                        $traitMethodSignature = "{$traitName}::{$methodName}";
+                        $methodThrows = $this->methodThrows[$traitMethodSignature]
+                            ?? $this->globalMethodThrows[$traitMethodSignature]
+                            ?? null;
+
+                        if ($methodThrows !== null) {
+                            break 2;
+                        }
+                    }
+                }
+
+                $parentClass = $this->classHierarchy[$parentClass] ?? null;
+                $depth++;
+            }
+        }
+
         return $methodThrows;
     }
 }
