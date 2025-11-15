@@ -294,14 +294,60 @@ final class Analyzer
 
         $directories = [];
 
-        if (isset($composerData['autoload']['psr-4']) && is_array($composerData['autoload']['psr-4'])) {
-            foreach ($composerData['autoload']['psr-4'] as $paths) {
-                $pathList = is_array($paths) ? $paths : [$paths];
+        $autoloadSections = [];
 
-                foreach ($pathList as $path) {
+        if (isset($composerData['autoload'])) {
+            $autoloadSections[] = $composerData['autoload'];
+        }
+
+        if (isset($composerData['autoload-dev'])) {
+            $autoloadSections[] = $composerData['autoload-dev'];
+        }
+
+        foreach ($autoloadSections as $autoload) {
+            if (isset($autoload['psr-4']) && is_array($autoload['psr-4'])) {
+                foreach ($autoload['psr-4'] as $paths) {
+                    $pathList = is_array($paths) ? $paths : [$paths];
+
+                    foreach ($pathList as $path) {
+                        $fullPath = $projectRoot . '/' . rtrim((string) $path, '/');
+
+                        if (!is_dir($fullPath)) {
+                            continue;
+                        }
+
+                        if (in_array($fullPath, $directories, true)) {
+                            continue;
+                        }
+
+                        $directories[] = $fullPath;
+                    }
+                }
+            }
+        }
+
+        foreach ($autoloadSections as $autoload) {
+            if (isset($autoload['psr-0']) && is_array($autoload['psr-0'])) {
+                foreach ($autoload['psr-0'] as $paths) {
+                    $pathList = is_array($paths) ? $paths : [$paths];
+
+                    foreach ($pathList as $path) {
+                        $fullPath = $projectRoot . '/' . rtrim((string) $path, '/');
+
+                        if (!is_dir($fullPath) || in_array($fullPath, $directories, true)) {
+                            continue;
+                        }
+
+                        $directories[] = $fullPath;
+                    }
+                }
+            }
+
+            if (isset($autoload['classmap']) && is_array($autoload['classmap'])) {
+                foreach ($autoload['classmap'] as $path) {
                     $fullPath = $projectRoot . '/' . rtrim((string) $path, '/');
 
-                    if (!is_dir($fullPath)) {
+                    if (!is_dir($fullPath) || in_array($fullPath, $directories, true)) {
                         continue;
                     }
 
@@ -310,58 +356,18 @@ final class Analyzer
             }
         }
 
-        if (isset($composerData['autoload']['psr-0']) && is_array($composerData['autoload']['psr-0'])) {
-            foreach ($composerData['autoload']['psr-0'] as $paths) {
-                $pathList = is_array($paths) ? $paths : [$paths];
-
-                foreach ($pathList as $path) {
+        foreach ($autoloadSections as $autoload) {
+            if (isset($autoload['files']) && is_array($autoload['files'])) {
+                foreach ($autoload['files'] as $path) {
                     $fullPath = $projectRoot . '/' . rtrim((string) $path, '/');
 
-                    if (!is_dir($fullPath)) {
-                        continue;
+                    if (is_dir($fullPath)) {
+                        if (!in_array($fullPath, $directories, true)) {
+                            $directories[] = $fullPath;
+                        }
+                    } elseif (is_file($fullPath)) {
+                        $this->filesToAnalyze[] = $fullPath;
                     }
-
-                    $directories[] = $fullPath;
-                }
-            }
-        }
-
-        if (isset($composerData['autoload']['classmap']) && is_array($composerData['autoload']['classmap'])) {
-            foreach ($composerData['autoload']['classmap'] as $path) {
-                $fullPath = $projectRoot . '/' . rtrim((string) $path, '/');
-
-                if (!is_dir($fullPath)) {
-                    continue;
-                }
-
-                $directories[] = $fullPath;
-            }
-        }
-
-        if (isset($composerData['autoload']['files']) && is_array($composerData['autoload']['files'])) {
-            foreach ($composerData['autoload']['files'] as $path) {
-                $fullPath = $projectRoot . '/' . rtrim((string) $path, '/');
-
-                if (is_dir($fullPath)) {
-                    $directories[] = $fullPath;
-                } elseif (is_file($fullPath)) {
-                    $this->filesToAnalyze[] = $fullPath;
-                }
-            }
-        }
-
-        if (isset($composerData['autoload-dev']['psr-4']) && is_array($composerData['autoload-dev']['psr-4'])) {
-            foreach ($composerData['autoload-dev']['psr-4'] as $paths) {
-                $pathList = is_array($paths) ? $paths : [$paths];
-
-                foreach ($pathList as $path) {
-                    $fullPath = $projectRoot . '/' . rtrim((string) $path, '/');
-
-                    if (!is_dir($fullPath)) {
-                        continue;
-                    }
-
-                    $directories[] = $fullPath;
                 }
             }
         }
@@ -399,10 +405,7 @@ final class Analyzer
                 }
             );
 
-            $iterator = new RecursiveIteratorIterator(
-                $filteredIterator,
-                RecursiveIteratorIterator::CATCH_GET_CHILD
-            );
+            $iterator = new RecursiveIteratorIterator($filteredIterator);
 
             foreach ($iterator as $file) {
                 try {
@@ -452,10 +455,7 @@ final class Analyzer
         );
 
         try {
-            $iterator = new RecursiveIteratorIterator(
-                $filteredIterator,
-                RecursiveIteratorIterator::CATCH_GET_CHILD
-            );
+            $iterator = new RecursiveIteratorIterator($filteredIterator);
 
             foreach ($iterator as $file) {
                 try {
